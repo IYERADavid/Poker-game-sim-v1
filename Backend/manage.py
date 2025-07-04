@@ -7,30 +7,9 @@ import subprocess
 import psycopg2
 from app.config import settings
 
-def create_database():
-    """Create the database and tables"""
+def create_table():
+    """Create the database table"""
     try:
-        # Connect to postgres database to create our database
-        conn = psycopg2.connect(
-            host="localhost",
-            database="postgres",
-            user="postgres",
-            password="password"
-        )
-        conn.autocommit = True
-        
-        with conn.cursor() as cursor:
-            # Create database if it doesn't exist
-            cursor.execute("SELECT 1 FROM pg_database WHERE datname = 'poker_db'")
-            if not cursor.fetchone():
-                cursor.execute("CREATE DATABASE poker_db")
-                print("✅ Database 'poker_db' created")
-            else:
-                print("✅ Database 'poker_db' already exists")
-        
-        conn.close()
-        
-        # Now connect to our database and create tables
         conn = psycopg2.connect(settings.DATABASE_URL)
         
         with conn.cursor() as cursor:
@@ -61,7 +40,7 @@ def create_database():
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_hands_created_at ON hands(created_at)")
             
             conn.commit()
-            print("✅ Tables created successfully")
+            print("✅ Table created successfully")
         
         conn.close()
         
@@ -86,16 +65,16 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python manage.py [command]")
         print("Commands:")
-        print("  createdb  - Create database and tables")
-        print("  runserver - Start the FastAPI server")
+        print("  createTable  - Create database table")
+        print("  runServer - Start the FastAPI server")
         print("  test      - Run tests")
         sys.exit(1)
     
     command = sys.argv[1]
     
-    if command == "createdb":
-        create_database()
-    elif command == "runserver":
+    if command == "createTable":
+        create_table()
+    elif command == "runServer":
         run_server()
     elif command == "test":
         run_tests()

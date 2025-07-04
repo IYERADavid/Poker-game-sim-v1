@@ -5,7 +5,7 @@ load_dotenv()
 
 class Settings:
     # Database
-    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/poker_db")
+    DATABASE_URL = os.getenv("DATABASE_URL")
     
     # API
     API_V1_STR = "/api/v1"
