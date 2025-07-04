@@ -1,7 +1,107 @@
-from app import create_app
-import uvicorn
+#!/usr/bin/env python3
+"""
+Management script for the poker backend
+"""
+import sys
+import subprocess
+import psycopg2
+from app.config import settings
 
-app = create_app()
+def create_database():
+    """Create the database and tables"""
+    try:
+        # Connect to postgres database to create our database
+        conn = psycopg2.connect(
+            host="localhost",
+            database="postgres",
+            user="postgres",
+            password="password"
+        )
+        conn.autocommit = True
+        
+        with conn.cursor() as cursor:
+            # Create database if it doesn't exist
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname = 'poker_db'")
+            if not cursor.fetchone():
+                cursor.execute("CREATE DATABASE poker_db")
+                print("✅ Database 'poker_db' created")
+            else:
+                print("✅ Database 'poker_db' already exists")
+        
+        conn.close()
+        
+        # Now connect to our database and create tables
+        conn = psycopg2.connect(settings.DATABASE_URL)
+        
+        with conn.cursor() as cursor:
+            # Create hands table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS hands (
+                    id SERIAL PRIMARY KEY,
+                    hand_id VARCHAR(36) UNIQUE NOT NULL,
+                    stack_settings JSONB NOT NULL,
+                    dealer_position INTEGER NOT NULL,
+                    small_blind_position INTEGER NOT NULL,
+                    big_blind_position INTEGER NOT NULL,
+                    hole_cards JSONB NOT NULL,
+                    action_sequence TEXT NOT NULL,
+                    winnings JSONB NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    
+                    CONSTRAINT valid_positions CHECK (
+                        dealer_position >= 0 AND dealer_position < 6 AND
+                        small_blind_position >= 0 AND small_blind_position < 6 AND
+                        big_blind_position >= 0 AND big_blind_position < 6
+                    )
+                )
+            """)
+            
+            # Create indexes
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_hands_hand_id ON hands(hand_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_hands_created_at ON hands(created_at)")
+            
+            conn.commit()
+            print("✅ Tables created successfully")
+        
+        conn.close()
+        
+    except Exception as e:
+        print(f"❌ Error creating database: {e}")
+        sys.exit(1)
+
+def run_server():
+    """Run the FastAPI server"""
+    subprocess.run([
+        "uvicorn", "app.main:app", 
+        "--reload", 
+        "--host", "0.0.0.0", 
+        "--port", "8000"
+    ])
+
+def run_tests():
+    """Run the test suite"""
+    subprocess.run(["pytest", "-v"])
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python manage.py [command]")
+        print("Commands:")
+        print("  createdb  - Create database and tables")
+        print("  runserver - Start the FastAPI server")
+        print("  test      - Run tests")
+        sys.exit(1)
+    
+    command = sys.argv[1]
+    
+    if command == "createdb":
+        create_database()
+    elif command == "runserver":
+        run_server()
+    elif command == "test":
+        run_tests()
+    else:
+        print(f"Unknown command: {command}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    uvicorn.run("manage:app", host="127.0.0.1", port=8000, reload=True)
+    main()
