@@ -30,8 +30,8 @@ A complete Texas Hold'em poker simulation with Next.js frontend and FastAPI back
 
 ### 1. Clone and Setup
 \`\`\`bash
-git clone https://github.com/IYERADavid/Poker
-cd Poker
+git clone https://github.com/IYERADavid/Poker-game-sim-v1
+cd Poker-game-sim-v1
 \`\`\`
 
 # One-command setup (installs everything & runs the web app)
