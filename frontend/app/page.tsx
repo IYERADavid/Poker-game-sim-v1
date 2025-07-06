@@ -28,10 +28,6 @@ export default function Home() {
         {/* Game Component */}
         <PokerGame />
 
-        {/* Footer */}
-        <div className="text-center mt-8 text-gray-500 text-sm">
-          <p>Complete poker simulation with hand history and database integration</p>
-        </div>
       </div>
     </div>
   )
