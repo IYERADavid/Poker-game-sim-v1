@@ -13,6 +13,7 @@ import { Minus, Plus, RotateCcw, Play, Users, TrendingUp, Clock, Shuffle, Target
 import { PokerGame as Game, GamePhase } from "@/lib/poker/game"
 import { PlayerAction } from "@/lib/poker/player"
 import type { HandResult } from "@/lib/poker/types"
+import { PokerAPI } from "@/lib/poker/api"
 
 /**
  * Main Poker Game Component with Debug Information
@@ -49,14 +50,42 @@ const PokerGame = () => {
     console.log("Valid Actions:", newValidActions)
     console.log("Current Bet:", newState.currentBet)
     console.log("Pot:", newState.pot)
-    if (newState.debugInfo) {
-      console.log("Debug Info:", newState.debugInfo)
-    }
   }, [game])
+
+  /**
+   * Save hand to backend
+   */
+  const saveHandToBackend = async (hand: HandResult) => {
+    try {
+      await PokerAPI.saveHand(hand)
+      console.log("✅ Hand saved to backend successfully")
+    } catch (error) {
+      console.error("❌ Failed to save hand to backend:", error)
+    }
+  }
+
+  /**
+   * get hand history from backend
+   */
+  const fetchHandHistory = async () => {
+    try {
+      const history = await PokerAPI.getAllHands()
+      setHandHistory(history)
+      console.log("✅ Hand history fetched successfully")
+    } catch (error) {
+      console.error("❌ Failed to fetch hand history:", error)
+    }
+  }
 
   useEffect(() => {
     updateGameState()
   }, [updateGameState])
+
+  useEffect(() => {
+    // Fetch initial hand history on mount
+    fetchHandHistory()
+  }
+  , [])
 
   /**
    * Reset the game to initial state
@@ -78,14 +107,10 @@ const PokerGame = () => {
     try {
       // If previous hand is finished, save it to history
       if (gameState.phase === GamePhase.FINISHED) {
-        console.log("Saving completed hand to history...")
         const handResult = game.generateHandResult()
-        setHandHistory((prev) => {
-          const newHistory = [handResult, ...prev]
-          console.log("Hand saved to history:", handResult)
-          console.log("Total hands in history:", newHistory.length)
-          return newHistory
-        })
+        // Save to backend
+        await saveHandToBackend(handResult)
+        fetchHandHistory();
       }
 
       if (gameState.isFirstAction) {
@@ -118,13 +143,10 @@ const PokerGame = () => {
         // Check if hand is now complete
         const newState = game.getGameState()
         if (newState.phase === GamePhase.FINISHED) {
-          console.log("Hand completed! Saving to history...")
           const handResult = game.generateHandResult()
-          setHandHistory((prev) => {
-            const newHistory = [handResult, ...prev]
-            console.log("Hand automatically saved:", handResult)
-            return newHistory
-          })
+          // Save to backend
+          await saveHandToBackend(handResult)
+          fetchHandHistory();
         }
       } else {
         console.log("Action failed - check game logs")
@@ -200,7 +222,7 @@ const PokerGame = () => {
       {/* Left Column - Setup & Actions */}
       <div className="space-y-6">
         {/* Debug Toggle */}
-        <Card className="border border-yellow-200 bg-yellow-50">
+        {/* <Card className="border border-yellow-200 bg-yellow-50">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Debug Mode</Label>
@@ -210,10 +232,10 @@ const PokerGame = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Debug Info */}
-        {showDebug && (
+        {/* {showDebug && (
           <Card className="border border-yellow-300 bg-yellow-50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-yellow-800">Debug Information</CardTitle>
@@ -235,25 +257,12 @@ const PokerGame = () => {
                 <strong>Amount to Call:</strong>{" "}
                 {gameState.currentBet - (gameState.players[gameState.activePlayerIndex]?.currentBet || 0)}
               </div>
-              {gameState.debugInfo && (
-                <>
-                  <div>
-                    <strong>Active Players:</strong> {gameState.debugInfo.activePlayers}
-                  </div>
-                  <div>
-                    <strong>Players Acted:</strong> {gameState.debugInfo.playersActed}
-                  </div>
-                  <div>
-                    <strong>Bets Matched:</strong> {gameState.debugInfo.betsMatched ? "Yes" : "No"}
-                  </div>
-                </>
-              )}
               <div>
                 <strong>Hand History Count:</strong> {handHistory.length}
               </div>
             </CardContent>
           </Card>
-        )}
+        )} */}
 
         {/* Setup Section */}
         <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
@@ -641,7 +650,7 @@ const PokerGame = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="text-xs text-gray-500 mt-2 text-right">{hand.timestamp.toLocaleTimeString()}</div>
+                      <div className="text-xs text-gray-500 mt-2 text-right">{new Date(hand.timestamp).toLocaleTimeString()} GMT</div>
                     </div>
                   ))}
                 </div>

@@ -32,7 +32,7 @@ export class HandEvaluator {
     const allCards = [...holeCards, ...communityCards]
 
     // For now, return a random evaluation
-    // TODO: Implement proper hand evaluation with pokerkit
+    // TODO: Implement proper hand evaluation with pokerkit from Backend
     const ranks = Object.values(HandRank).filter((v) => typeof v === "number") as number[]
     const randomRank = ranks[Math.floor(Math.random() * ranks.length)]
 

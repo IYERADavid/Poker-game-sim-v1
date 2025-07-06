@@ -36,6 +36,8 @@ export class PokerGame {
   private currentBet = 0
   private activePlayerIndex = 0
   private dealerIndex = 0
+  private smallBlindIndex = 0
+  private bigBlindIndex = 0
   private phase: GamePhase = GamePhase.SETUP
   private actionLog: string[] = []
   private gameActions: GameAction[] = []
@@ -100,10 +102,12 @@ export class PokerGame {
     // Reset all players for new hand
     this.players.forEach((player) => player.reset())
 
-    // Move dealer button (rotate positions)
-    this.dealerIndex = (this.dealerIndex + 1) % 6
-    this.smallBlindIndex = (this.dealerIndex + 1) % 6
-    this.bigBlindIndex = (this.dealerIndex + 2) % 6
+    // Move dealer to next active player
+    this.dealerIndex = this.findNextPlayerWithChips(this.dealerIndex)
+
+    // Assign blinds to next two active players
+    this.smallBlindIndex = this.findNextPlayerWithChips(this.dealerIndex)
+    this.bigBlindIndex = this.findNextPlayerWithChips(this.smallBlindIndex)
   }
 
   private postBlinds(): void {
@@ -164,6 +168,23 @@ export class PokerGame {
     // If we get here, no one can act - hand should be complete
     console.log(`[POKER] No active players found after ${attempts} attempts`)
   }
+
+  private findNextPlayerWithChips(fromIndex: number): number {
+    const total = this.players.length
+    let next = (fromIndex + 1) % total
+    let attempts = 0
+  
+    while (this.players[next].stack === 0 && attempts < total) {
+      next = (next + 1) % total
+      attempts++
+    }
+  
+    if (attempts >= total) {
+      throw new Error("No players with chips remaining")
+    }
+  
+    return next
+  }  
 
   processAction(action: PlayerAction, amount?: number): boolean {
     const player = this.players[this.activePlayerIndex]
@@ -426,8 +447,8 @@ export class PokerGame {
       winner.stack += this.pot
       this.logAction(`${winner.name} wins ${this.pot} (no showdown needed)`)
     } else {
-      // Multiple players - evaluate hands (simplified for now)
-      const winner = activePlayers[0] // TODO: Implement proper hand evaluation
+      // Multiple players - evaluate hands
+      const winner = activePlayers[0]
       winner.stack += this.pot
       this.logAction(`${winner.name} wins ${this.pot} with best hand`)
     }

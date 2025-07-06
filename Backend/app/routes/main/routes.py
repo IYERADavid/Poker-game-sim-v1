@@ -10,7 +10,7 @@ from ...database import db
 
 # Import pokerkit for hand validation
 try:
-    from pokerkit import Deck, Card
+    from pokerkit import Card
     POKERKIT_AVAILABLE = True
 except ImportError:
     POKERKIT_AVAILABLE = False
@@ -22,14 +22,48 @@ router = APIRouter(prefix="/api/v1", tags=["hands"])
 async def create_hand(request: HandCreateRequest):
     """Create a new hand record"""
     try:
+        # Validate pokerkit is available
+        if not POKERKIT_AVAILABLE:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="pokerkit library is not available"
+            )
+
+        used_cards = set()
+
+        for player_id_str, card_str in request.hole_cards.items():
+            if len(card_str) != 4:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Hole cards for player {player_id_str} must be 4 characters like 'AsKd'"
+                )
+            try:
+                # Parse the two cards for this player
+                card1 = Card(card_str[0], card_str[1])
+                card2 = Card(card_str[2], card_str[3])
+
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid card format for player {player_id_str}: {card_str} ({e})"
+                )
+            
+            for card in (card1, card2):
+                if card in used_cards:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Duplicate card detected: {card}"
+                    )
+                used_cards.add(card)
+
         # Generate unique hand ID
         hand_id = str(uuid.uuid4())
         
         # Convert request to HandRecord
         positions = HandPositions(
             dealer=request.positions["dealer"],
-            small_blind=request.positions["smallBlind"],
-            big_blind=request.positions["bigBlind"]
+            small_blind=request.positions["small_blind"],
+            big_blind=request.positions["big_blind"]
         )
         
         # Convert string keys to int keys for consistency
@@ -88,6 +122,8 @@ async def create_hand(request: HandCreateRequest):
             "data": hand_record.to_dict()
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error creating hand: {e}")
         raise HTTPException(
@@ -111,16 +147,16 @@ async def get_all_hands():
         hands = []
         for row in rows:
             hand_data = {
-                "hand_id": row["hand_id"],
-                "stack_settings": json.loads(row["stack_settings"]),
+                "handId": row["hand_id"],
+                "stackSettings": row["stack_settings"],
                 "positions": {
                     "dealer": row["dealer_position"],
                     "smallBlind": row["small_blind_position"],
                     "bigBlind": row["big_blind_position"]
                 },
-                "hole_cards": json.loads(row["hole_cards"]),
-                "action_sequence": row["action_sequence"],
-                "winnings": json.loads(row["winnings"]),
+                "holeCards": row["hole_cards"],
+                "actionSequence": row["action_sequence"],
+                "winnings": row["winnings"],
                 "timestamp": row["created_at"].isoformat()
             }
             hands.append(hand_data)
@@ -155,16 +191,16 @@ async def get_hand(hand_id: str):
         
         row = rows[0]
         return {
-            "hand_id": row["hand_id"],
-            "stack_settings": json.loads(row["stack_settings"]),
+            "handId": row["hand_id"],
+            "stackSettings": row["stack_settings"],
             "positions": {
                 "dealer": row["dealer_position"],
                 "smallBlind": row["small_blind_position"],
                 "bigBlind": row["big_blind_position"]
             },
-            "hole_cards": json.loads(row["hole_cards"]),
-            "action_sequence": row["action_sequence"],
-            "winnings": json.loads(row["winnings"]),
+            "holeCards": row["hole_cards"],
+            "actionSequence": row["action_sequence"],
+            "winnings": row["winnings"],
             "timestamp": row["created_at"].isoformat()
         }
         
@@ -196,53 +232,6 @@ async def delete_hand(hand_id: str):
         raise
     except Exception as e:
         logging.error(f"Error deleting hand {hand_id}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-
-@router.post("/hands/validate")
-async def validate_hand(request: HandValidationRequest):
-    """Validate hand data using pokerkit"""
-    try:
-        if not POKERKIT_AVAILABLE:
-            return {
-                "valid": True,
-                "message": "Validation skipped - pokerkit not available",
-                "details": "Install pokerkit for full validation"
-            }
-        
-        # Basic validation
-        errors = []
-        
-        # Check hole cards format
-        for player_id, cards in request.hole_cards.items():
-            if len(cards) != 4:  # e.g., "AhKs"
-                errors.append(f"Player {player_id} hole cards invalid format: {cards}")
-        
-        # Check community cards
-        if len(request.community_cards) not in [0, 3, 4, 5]:
-            errors.append(f"Invalid community cards count: {len(request.community_cards)}")
-        
-        # Check action sequence
-        if not request.action_sequence.strip():
-            errors.append("Action sequence cannot be empty")
-        
-        if errors:
-            return {
-                "valid": False,
-                "message": "Validation failed",
-                "errors": errors
-            }
-        
-        return {
-            "valid": True,
-            "message": "Hand data is valid",
-            "details": "All checks passed"
-        }
-        
-    except Exception as e:
-        logging.error(f"Error validating hand: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
