@@ -30,10 +30,12 @@ A complete Texas Hold'em poker simulation with Next.js frontend and FastAPI back
 
 ### 1. Clone and Setup
 \`\`\`bash
-git clone https://github.com/IYERADavid/Pocker-game
-cd poker
+git clone https://github.com/IYERADavid/Poker
+cd Poker
+\`\`\`
 
 # One-command setup (installs everything & runs the web app)
+\`\`\`bash
 docker compose up -d
 \`\`\`
 
@@ -43,30 +45,6 @@ docker compose up -d
 - **📖 API Documentation**: http://localhost:8000/docs
 - **🔍 Health Check**: http://localhost:8000/api/v1/health
 
-## 📁 Project Structure
-
-\`\`\`
-poker-fullstack/
-├── 📁 frontend/                 # Next.js React application
-│   ├── 📁 app/                  # Next.js app router
-│   ├── 📁 components/           # React components
-│   │   └── poker-game.tsx       # Main game component
-│   ├── 📁 lib/                  # Utilities and game logic
-│   │   └── 📁 poker/            # Poker game engine and Backend API integration
-│   └── package.json
-├── 📁 backend/                  # FastAPI Python application
-│   ├── 📁 app/                  # Application code
-│   │   ├── 📁 routes/           # API endpoints
-│   │   ├── config.py            # Configuration
-│   │   ├── database.py          # Database operations
-│   │   ├── model.py             # Data models
-│   │   └── main.py              # FastAPI app
-│   ├── manage.py                # Management commands
-│   ├── requirements.txt         # Python dependencies
-│   └── test_api.py              # API tests
-├── 📁 scripts/                  # Setup and utility scripts
-└── README.md
-\`\`\`
 
 ## 🎮 How to Play
 
